@@ -1,0 +1,9 @@
+[package]
+name = "line-splat"
+version = "0.1.0"
+authors = ["James Bendig <jbendig@starbytesoftware.com>"]
+
+[dependencies]
+"clap" = "2.26"
+"image" = "0.15"
+"rand" = "0.3"
