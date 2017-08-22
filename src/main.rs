@@ -12,7 +12,7 @@ use image::ImageBuffer;
 use rand::{Closed01,Open01,Rand,Rng,ThreadRng};
 use rand::distributions::{IndependentSample,Normal};
 
-use line_splat::imageprocessing::gradient;
+use line_splat::imageprocessing::{gradient,angle_to_direction,non_maximum_suppression};
 use line_splat::painter::Painter;
 use line_splat::utility::{clamp_to_u8,min_f32,max_f32,difference_theta,mix,rgb_to_hsl,hsl_to_rgb};
 
@@ -148,9 +148,89 @@ fn random_energy_line(rng: &mut ThreadRng,gradient: &[f32],width: u32,height: u3
     (xc,yc,x1,y1,x2,y2)
 }
 
-fn random_edge_web_line(rng: &mut ThreadRng,gradient: &[f32],width: u32,height: u32) -> (usize,usize,usize,usize,usize,usize) {
-    //TODO: Implement me.
-    (0,0,0,0,0,0)
+fn edge_web(rng: &mut ThreadRng,source_image_pixels: &[u8],source_image_width: u32,source_image_height: u32,gradient: &[f32],work_image_pixels: &mut [u8]) {
+    const DISTANCE_MIN: f32 = 4.0;
+    const DISTANCE_MAX: f32 = 50.0;
+
+    let edge_pixels = non_maximum_suppression(gradient,source_image_width,source_image_height);
+
+    let width = source_image_width as usize;
+    let height = source_image_height as usize;
+
+    //Find all edge points.
+    let mut edge_points = vec![];
+    for y in 0..height {
+        for x in 0..width {
+            if edge_pixels[y * width + x] == 255 {
+                edge_points.push((x,y));
+            }
+        }
+    }
+
+    let lines_per_point = 1;//TODO: Maybe support variable lines again? 1000000 / edge_points.len();
+
+    //Draw a line between points that are between DISTANCE_MIN and DISTANCE_MAX of each other and
+    //have the same relative orientation. Only the closest lines_per_point lines are drawn.
+    //TODO: Use a quadtree to speed up this part.
+    let mut painter = Painter::new();
+    let mut other_points = vec![];
+    for y in 0..edge_points.len() {
+        let first_point = edge_points[y];
+
+        //Find potential matching points.
+        other_points.clear();
+        for x in y + 1..edge_points.len() {
+            let second_point = edge_points[x];
+
+            let first_direction = angle_to_direction(gradient[first_point.1 * width + first_point.0 + 1]);
+            let second_direction = angle_to_direction(gradient[second_point.1 * width + second_point.0 + 1]);
+
+            let diff_x = second_point.0 as f32 - first_point.0 as f32;
+            let diff_y = second_point.1 as f32 - first_point.1 as f32;
+            let distance = diff_x.hypot(diff_y);
+
+            if distance >= DISTANCE_MIN && distance <= DISTANCE_MAX && first_direction == second_direction {
+                other_points.push((second_point,diff_x,diff_y,distance));
+            }
+        }
+
+        //Sort by distance.
+        other_points.sort_by(|lhs,rhs| lhs.3.partial_cmp(&rhs.3).unwrap_or(std::cmp::Ordering::Equal));
+        if other_points.len() > lines_per_point {
+            other_points.drain(lines_per_point..);
+        }
+
+        for &(second_point,diff_x,diff_y,_) in &other_points {
+            //Randomly pick a pixel between (inclusive) the two points to sample and use as the
+            //color for the line.
+            let range = Closed01::<f32>::rand(rng).0;
+            let xc = (first_point.0 as f32 + diff_x * range).round() as i32;
+            let yc = (first_point.1 as f32 + diff_y * range).round() as i32;
+            let xc = std::cmp::min(std::cmp::max(0,xc),width as i32 - 1) as usize;
+            let yc = std::cmp::min(std::cmp::max(0,yc),height as i32 - 1) as usize;
+
+            let (red,green,blue) = color_at(&source_image_pixels,source_image_width,source_image_height,xc,yc);
+            painter.set_pen(red,green,blue);
+
+            //Draw the line.
+            painter.line(work_image_pixels,source_image_width as usize,source_image_height as usize,first_point.0 as i32,first_point.1 as i32,second_point.0 as i32,second_point.1 as i32);
+        }
+    }
+
+
+    //Debug code for showing the detected edge pixels.
+    /*for y in 0..source_image_height {
+        for x in 0..source_image_width {
+            let index = (y * source_image_width + x) as usize;
+
+            if edge_pixels[index] == 255 {
+                let index = index * 3;
+                work_image_pixels[index + 0] = 0;
+                work_image_pixels[index + 1] = 255;
+                work_image_pixels[index + 2] = 0;
+            }
+        }
+    }*/
 }
 
 fn main() {
@@ -274,12 +354,8 @@ fn main() {
                 (x1,y1,x2,y2)
             },
             Style::EdgeWeb => {
-                let (xc,yc,x1,y1,x2,y2) = random_edge_web_line(&mut rng,source_image_gradient.as_slice(),source_image_width,source_image_height);
-                let (red,green,blue) = color_at(&source_image_pixels,source_image_width,source_image_height,xc,yc);
-                let (red,green,blue) = shift_lightness(&mut rng,red,green,blue);
-                painter.set_pen(red,green,blue);
-
-                (x1,y1,x2,y2)
+                edge_web(&mut rng,source_image_pixels.as_slice(),source_image_width,source_image_height,source_image_gradient.as_slice(),work_image_pixels.as_mut_slice());
+                break;
             },
         };
         painter.line(&mut work_image_pixels,source_image_width as usize,source_image_height as usize,x1 as i32,y1 as i32,x2 as i32,y2 as i32);

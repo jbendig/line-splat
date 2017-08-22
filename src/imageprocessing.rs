@@ -33,3 +33,57 @@ pub fn gradient(buffer: &[u8],width: u32,height: u32) -> Vec<f32> {
     result
 }
 
+pub fn angle_to_direction(angle: f32) -> u32 {
+    let mut angle = angle;
+    if angle < 0.0 {
+        angle += std::f32::consts::PI;
+    }
+    angle = angle * 4.0 / std::f32::consts::PI;
+    angle.round() as u32 % 4
+}
+
+pub fn non_maximum_suppression(gradient: &[f32],width: u32,height: u32) -> Vec<u8> {
+    if width == 0 || height == 0 {
+        return vec![];
+    }
+
+    let width = width as usize;
+    let height = height as usize;
+
+    const THRESHOLD_HIGH: f32 = 110.0;
+    const THRESHOLD_LOW: f32 = THRESHOLD_HIGH / 2.0;
+
+    let result_size = width * height;
+    let mut result = Vec::with_capacity(result_size);
+    result.resize(result_size,0);
+
+    for y in 1..height - 1 {
+        for x in 1..width - 1 {
+            let base_index = y * width + x;
+            let input_index = base_index * 2;
+            let output_index = base_index;
+
+            let magnitude = gradient[input_index];
+            let direction = angle_to_direction(gradient[input_index + 1]);
+
+            let suppress = match direction {
+                0 => magnitude < gradient[input_index - 2] || magnitude < gradient[input_index + 2],
+                1 => magnitude < gradient[input_index - width * 2 - 2] || magnitude < gradient[input_index + width * 2 + 2],
+                2 => magnitude < gradient[input_index - width * 2] || magnitude < gradient[input_index + width * 2],
+                3 => magnitude < gradient[input_index - width * 2 + 2] || magnitude < gradient[input_index + width * 2 - 2],
+                _ => unreachable!(),
+            };
+
+            if suppress || magnitude < THRESHOLD_LOW {
+                result[output_index] = 0;
+            }
+            else {
+                //Note: High threshold is usually used here to divide up the edge into strong and
+                //weak portions but we want lots of edges so it's left out.
+                result[output_index] = 255;
+            }
+        }
+    }
+
+    result
+}
