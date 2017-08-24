@@ -6,17 +6,14 @@ The various styles are based off of some whiteboard doodles I did while brain st
 
 ## Examples
 
-+---------------+-------------------------------------+--------------------------------------+-------------------------------------+-----------------+
+| Original*     | Random                              | Steered                              | Energy                              | Edge Web        |
+|---------------|-------------------------------------|--------------------------------------|-------------------------------------|-----------------|
 | ![](examples/original_shrunk.png) | ![](examples/random_shrunk.png) | ![](examples/steered_shrunk.png) | ![](examples/energy_shrunk.png) | ![](examples/edgeweb_shrunk.png) |
-+---------------+-------------------------------------+--------------------------------------+-------------------------------------+-----------------+
 | ![](examples/original_cropped.png) | ![](examples/random_cropped.png) | ![](examples/steered_cropped.png) | ![](examples/energy_cropped.png) | ![](examples/edgeweb_cropped.png) |
-+---------------+-------------------------------------+--------------------------------------+-------------------------------------+-----------------+
 | [Full Size](examples/original.jpg) | [Full Size](examples/random.png) | [Full Size](examples/steered.png) | [Full Size](examples/energy.png) | [Full Size](examples/edgeweb.png) |
-+---------------+-------------------------------------+--------------------------------------+-------------------------------------+-----------------+
-| Original [^1] | --line-count=1000000 --style=random | --line-count=1000000 --style=steered | --line-count=1000000 --style=energy | --style=edgeweb |
-+---------------+-------------------------------------+--------------------------------------+-------------------------------------+-----------------+
+|               | --line-count=1000000 --style=random | --line-count=1000000 --style=steered | --line-count=1000000 --style=energy | --style=edgeweb |
 
-[^1]: [Yellowstone_2013 02 05_0452](https://www.flickr.com/photos/hbarrison/8491286056/) is copyright (c) 2013, Harvey Barrison. Used under the [CC BY-NC-SA 2.0 license](https://creativecommons.org/licenses/by-nc-sa/2.0/).
+*: [Yellowstone_2013 02 05_0452](https://www.flickr.com/photos/hbarrison/8491286056/) is copyright (c) 2013, Harvey Barrison. Used under the [CC BY-NC-SA 2.0 license](https://creativecommons.org/licenses/by-nc-sa/2.0/).
 
 ## Building
 
@@ -28,7 +25,7 @@ to compile the program. The executable can then be found with the name `line-spl
 
 ## Usage
 
-`text
+```text
 line-splat 0.1
 James Bendig
 Stylize images by drawing random lines. Supports JPEG and PNG images.
@@ -47,7 +44,7 @@ OPTIONS:
 ARGS:
     <INPUT>     Input image file
     <OUTPUT>    Output image file
-`
+```
 
 ## License
 
